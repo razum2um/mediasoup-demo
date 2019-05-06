@@ -200,9 +200,9 @@ echo ">>> running ffmpeg..."
 ffmpeg \
 	-v info \
 	-f avfoundation -i "1" \
-	-vf "scale=-1:720" \
+	-vf "scale=-1:480" \
 	-map 0:v:0 \
-	-pix_fmt yuv420p -c:v libvpx -b:v 1000k -deadline realtime -cpu-used 4 \
+	-pix_fmt yuv420p -c:v libvpx -b:v 1000k -deadline realtime -cpu-used 4 -vsync 2 \
 	-f tee \
 	"[select=v:f=rtp:ssrc=${VIDEO_SSRC}:payload_type=${VIDEO_PT}]rtp://${transportIp}:${transportPort}"
 
