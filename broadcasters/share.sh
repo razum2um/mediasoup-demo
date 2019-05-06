@@ -1,3 +1,46 @@
+# https://gist.githubusercontent.com/tomasinouk/8415acb4e2f86d54fcb9/raw/83225dbb382ac9e57671d12efe4c2c3efa236260/ffmpeg_examples.md
+
+# `ffmpeg -f avfoundation -i "1" -vcodec libx264 -r 10 -tune zerolatency -b:v 500k -bufsize 300k -f rtp rtp://localhost:1234`
+
+# `ffmpeg -f avfoundation -i "1" -vcodec libx264 -r 10 -tune zerolatency -b:v 500k -bufsize 300k -f rtp udp://127.0.0.1:1234`
+
+
+# `ffmpeg -f avfoundation -i "1" -vcodec libx264 -r 10 -tune zerolatency -b:v 500k -bufsize 300k -f mpegts udp://127.0.0.1:1234`
+
+
+# `ffmpeg -f avfoundation -i "1" -vcodec libx264 -r 10 -pix_fmt uyvy422 -tune zerolatency -b:v 500k -bufsize 300k -f mpegts udp://192.168.88.38:1234`
+
+
+# ffmpeg -f avfoundation -i "1" -r 50 -vcodec mpeg2video -b:v 8000 -f mpegts udp://192.168.88.38:1234
+
+# ffmpeg -f x11grab -s 1600x900 -r 50 -vcodec libx264 -preset ultrafast -tune zerolatency -crf 18 -f mpegts udp://localhost:1234
+
+# ## Mac OSX
+
+# -pix_fmt format set pixel format
+# -crf E..V…. Select the quality for constant quality mode (from 0 to 63) (default 0)
+# [avfoundation @ 0x7fb3f1801000] Selected pixel format (yuv420p) is not supported by the input device.
+# [avfoundation @ 0x7fb3f1801000] Supported pixel formats:
+# [avfoundation @ 0x7fb3f1801000]   uyvy422
+# [avfoundation @ 0x7fb3f1801000]   yuyv422
+# [avfoundation @ 0x7fb3f1801000]   nv12
+# [avfoundation @ 0x7fb3f1801000]   0rgb
+# [avfoundation @ 0x7fb3f1801000]   bgr0
+
+# `ffmpeg -f avfoundation -i "1" -r 10 -vcodec libx264 -preset ultrafast  -tune zerolatency -crf 18 -b:v 500k -bufsize 300k -f mpegts udp://192.168.88.38:1234`
+
+# `ffmpeg -f avfoundation -i "1" -r 10 -vcodec libx264 -pix_fmt uyvy422   -tune zerolatency         -b:v 500k -bufsize 300k -f mpegts udp://192.168.88.38:1234`
+
+# ## Windows
+
+# `ffmpeg -f dshow -i video="screen-capture-recorder" -r 10 -vcodec libx264 -preset ultrafast -tune zerolatency -crf 18 -b:v 500k -bufsize 300k -f mpegts udp://172.31.66.20:1234`
+
+
+# -crf 18
+
+# -pix_fmt yuv420p
+# -f mpegts
+
 #!/usr/bin/env bash
 
 function show_usage()
@@ -89,8 +132,8 @@ echo ">>> creating Broadcaster..."
 ${HTTPIE_COMMAND} \
 	POST ${SERVER_URL}/rooms/${ROOM_ID}/broadcasters \
 	id="${BROADCASTER_ID}" \
-	displayName="Broadcaster" \
-	device:='{"name": "FFmpeg"}' \
+	displayName="Broadcaster Share" \
+	device:='{"name": "FFmpeg Share"}' \
 	> /dev/null
 
 #
@@ -151,42 +194,26 @@ ${HTTPIE_COMMAND} -v \
 #
 echo ">>> running ffmpeg..."
 
-#
-# NOTES:
-# - We can add ?pkt_size=1200 to each rtp:// URI to limit the max packet size
-#   to 1200 bytes.
-#
-# ffmpeg \
-# 	-re \
-# 	-v info \
-# 	-stream_loop -1 \
-# 	-i ${MEDIA_FILE} \
-# 	-map 0:a:0 \
-# 	-acodec libopus -ab 128k -ac 2 -ar 48000 \
-# 	-map 0:v:0 \
-# 	-pix_fmt yuv420p -c:v libvpx -b:v 1000k -deadline realtime -cpu-used 4 \
-# 	-f tee \
-# 	"[select=a:f=rtp:ssrc=${AUDIO_SSRC}:payload_type=${AUDIO_PT}]rtp://${transportIp}:${transportPort}|[select=v:f=rtp:ssrc=${VIDEO_SSRC}:payload_type=${VIDEO_PT}]rtp://${transportIp}:${transportPort}"
+# ffmpeg -f avfoundation -i "1" -r 10 -vcodec libx264 -preset ultrafast  -tune zerolatency -crf 18 -b:v 500k -bufsize 300k -f mpegts udp://192.168.88.38:1234
+# -pix_fmt yuv420p -c:v libvpx -b:v 1000k -bufsize 300k -cpu-used 4 \
 
-# -re read input at native frame rate
-# audio copy only
 ffmpeg \
-	-re \
 	-v info \
-	-stream_loop -1 \
-	-i ${MEDIA_FILE} \
-	-map 0:a:0 \
-	-c:a copy \
+	-f avfoundation -i "1" \
+	-vf "scale=-1:720" \
+	-map 0:v:0 \
+	-pix_fmt yuv420p -c:v libvpx -b:v 1000k -deadline realtime -cpu-used 4 \
 	-f tee \
-	"[select=a:f=rtp:ssrc=${AUDIO_SSRC}:payload_type=${AUDIO_PT}]rtp://${transportIp}:${transportPort}"
+	"[select=v:f=rtp:ssrc=${VIDEO_SSRC}:payload_type=${VIDEO_PT}]rtp://${transportIp}:${transportPort}"
 
-# audio only recode
+# run but not works
 # ffmpeg \
-# 	-re \
 # 	-v info \
-# 	-stream_loop -1 \
-# 	-i ${MEDIA_FILE} \
-# 	-map 0:a:0 \
-# 	-acodec libopus -ab 128k -ac 2 -ar 48000 \
-# 	-f tee \
-# 	"[select=a:f=rtp:ssrc=${AUDIO_SSRC}:payload_type=${AUDIO_PT}]rtp://${transportIp}:${transportPort}rtp://${transportIp}:${transportPort}"
+# 	-f avfoundation -i "1" \
+# 	-map 0:v:0 \
+# 	-r 10 -vcodec libx264 -preset ultrafast  -tune zerolatency -crf 18 -b:v 500k \
+# 	-f mpegts "udp://${transportIp}:${transportPort}"
+
+	#-f tee \
+	#"[select=v:f=rtp:ssrc=${VIDEO_SSRC}:payload_type=${VIDEO_PT}]rtp://${transportIp}:${transportPort}"
+
