@@ -6,7 +6,8 @@ if (window.location.hostname === 'test.mediasoup.org')
 export function getProtooUrl({ roomId, peerId, forceH264, forceVP9 })
 {
 	const hostname = window.location.hostname;
-	let url = `wss://${hostname}:${protooPort}/?roomId=${roomId}&peerId=${peerId}`;
+	const protocol = window.location === 'https:' ? 'wss' : 'ws';
+	let url = `${protocol}://${hostname}:${protooPort}/?roomId=${roomId}&peerId=${peerId}`;
 
 	if (forceH264)
 		url = `${url}&forceH264=true`;
